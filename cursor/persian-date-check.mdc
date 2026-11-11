@@ -1,0 +1,61 @@
+---
+description: Audit Persian text for wrong Shamsi (Jalali) dates — impossible dates (31 Aban, 30 Esfand in a non-leap year), wrong weekdays ("Friday 21 Aban 1405" — it is Thursday), mismatched Jalali/Gregorian pairs stated together, relative dates ("tomorrow") that disagree with an absolute date in the same sentence, mixed digit scripts, Arabic-Indic digits, implausible years, and month-name misspellings. Apply whenever an agent writes or edits Persian content with dates, when a Persian deadline or event date looks wrong, when a text states both a Jalali and a Gregorian date, or before publishing any Persian text that names a day.
+globs: "**/*.{md,mdx,txt,html}"
+alwaysApply: false
+---
+
+# Persian date check — the audit layer your Jalali converter is missing
+
+## The contract
+
+1. **Check first, with the tool — never guess.** Run the checker
+   (zero-dependency, Python stdlib only):
+
+   ```bash
+   python3 scripts/persian_date_check.py check article.md
+   ```
+
+   Exit codes: `0` = no errors · `1` = errors found ·
+   `2` = usage error or an unreadable file. `--fix` writes
+   `<file>.fixed` (never overwrites the input) with only the
+   safely mechanical fixes (PDC-02 weekdays, PDC-08 month
+   spelling). Re-check the fixed file until exit 0.
+2. **The fix is mechanical + reviewed, not silent.** Never edit
+   dates by hand to silence a finding — run `--fix`, review the
+   `.fixed` diff, re-check. PDC-01 (impossible date), PDC-03
+   (mismatched pair) and PDC-04 (relative mismatch) need a human:
+   an impossible date is a judgement call about which number was
+   mistyped.
+3. **Know the limits — and say them.** This audits *dates stated
+   in text*. It does not convert dates for display (route that to
+   a converter), it does not know holidays, it does not parse
+   word-form dates («بیست و یکم آبان»), and relative dates are
+   only checked when an absolute date appears in the same sentence.
+
+## What each check means
+
+- **PDC-01 impossible date** — 31 Aban (30 days), 30 Esfand in a
+  non-leap year (1403 was a leap year, 1404 is not), 31 November.
+- **PDC-02 weekday mismatch** — the stated weekday disagrees with
+  the calendar. The most common agent date error; the fix is the
+  computed weekday.
+- **PDC-03 Gregorian-pair mismatch** — a Jalali date and a Gregorian
+  date stated together (parentheses, «برابر با», «=») that do not
+  convert to each other.
+- **PDC-04 relative-date mismatch** — «فردا» / «۳ روز پیش» and an
+  absolute date in the same sentence that disagree, resolved
+  against `--today` (default: today).
+- **PDC-05 digit-script mixing** — two digit scripts inside one
+  date («۲1 آبان ۱۴۰۵»).
+- **PDC-06 Arabic-Indic digits** — ٠-٩ in Persian text; use ۰-۹.
+- **PDC-07 implausible year** — Jalali year outside 1300–1500.
+- **PDC-08 month misspelling** — a token where a month name
+  belongs, one edit away from a real month («ابان» for «آبان»).
+
+Calendar facts: months 1–6 have 31 days, 7–11 have 30, Esfand 29
+(30 in leap years); the week starts Saturday; 20 Aban 1405 =
+Wednesday 11 November 2026. The converter is verified against
+jdatetime on every day 1300–1500 (73,414 days, 0 mismatches).
+
+See `skills/persian-date-check/SKILL.md` for the full contract and
+`references/date-rules.md` for why each check exists.
